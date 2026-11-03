@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Command Centre</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f5f7fa;--card:#fff;--tx:#1d2733;--mu:#6b7888;--bd:#e3e8ee;--red:#fde8e8;--amb:#fff0dd;--yel:#fff9d9;--grn:#e5f6ea;--blu:#e6f0fb;--ac:#2f6fd0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181d;--card:#1d242c;--tx:#e8edf2;--mu:#93a0ae;--bd:#2c3640;--red:#4a2326;--amb:#4a3320;--yel:#47421f;--grn:#1f3a2a;--blu:#1f3350}}
+:root[data-theme="dark"]{--bg:#14181d;--card:#1d242c;--tx:#e8edf2;--mu:#93a0ae;--bd:#2c3640;--red:#4a2326;--amb:#4a3320;--yel:#47421f;--grn:#1f3a2a;--blu:#1f3350}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:auto;padding:16px 14px 90px}
+h1{font-size:22px;margin:0}h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);margin:22px 0 8px}
+.sub{color:var(--mu);margin:2px 0 12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.chip{background:var(--card);border:1px solid var(--bd);border-radius:999px;padding:7px 12px;cursor:pointer;font-size:13px}
+.chip b{margin-right:4px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card.r{border-left:5px solid #e25555}.card.a{border-left:5px solid #f0a040}.card.y{border-left:5px solid #e8cf4a}.card.g{border-left:5px solid #4caf70}
+.t{font-weight:600}.m{color:var(--mu);font-size:13px}.why{font-size:13px;margin:4px 0}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+button,select,input,textarea{font:inherit;color:var(--tx)}
+button{background:var(--blu);border:0;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+button.p{background:var(--ac);color:#fff}button.x{background:var(--bd)}
+input,select,textarea{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px;width:100%}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));padding:14px 18px;border-radius:999px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9;padding:14px}
+.ov.on{display:flex}.box{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:440px;max-height:90vh;overflow:auto}
+.box label{display:block;font-size:12px;color:var(--mu);margin:8px 0 3px}
+#focus{background:var(--bg);z-index:10;flex-direction:column;text-align:center}
+.tm{font-size:84px;font-weight:200;font-variant-numeric:tabular-nums;margin:10px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px;border-bottom:1px solid var(--bd);text-align:left}
+.sc{overflow-x:auto}
+</style></head><body><main id="app"></main>
+<button class="fab p" onclick="addT()">+ Quick Add</button>
+<div class="ov" id="md"><div class="box" id="mb"></div></div>
+<div class="ov" id="focus"><div id="fb" style="max-width:480px;width:100%"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const K='cc_v1';
+const iso=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,10)};
+const today=()=>iso(new Date());const ad=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
+const dd=(a,b)=>Math.round((new Date(a)-new Date(b))/864e5);
+const now=()=>new Date().toISOString();
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let db,fl={co:'',pr:''},set={f:25,s:5,l:15,n:4,stale:3,soon:3,esc:3,nt:'daily'};
+function seed(){
+ const C=['SMS Biosystems Pvt Ltd','SMS Vetcare Technologies Pvt Ltd','Sagenome Pvt Ltd','GRMS'];
+ const P=['GST Compliance','Banking','HR','Company Formation','Software Development','Statutory Compliance'];
+ const mk=(title,co,pr,due,pri,who,dl,wt,fu,up,pp)=>({id:Math.random().toString(36).slice(2,9),title,co,proj:pr,due:due==null?'':ad(due),pri,who,dl,wait:wt,fu:fu==null?'':ad(fu),upd:ad(-up),pp:pp||0,done:0,notes:[],focus:0,log:[[now(),'Created']]});
+ return{cos:C,prs:P,people:['Biju','Anil','CA Office','Bank Manager'],tasks:[
+ mk('Submit GST reply','SMS Biosystems Pvt Ltd','GST Compliance',-2,1,'Rahul',0,'CA confirmation',0,4,1),
+ mk('Vetcos software testing','SMS Vetcare Technologies Pvt Ltd','Software Development',1,2,'Biju',1,'',null,3),
+ mk('HDFC fund transfer','SMS Biosystems Pvt Ltd','Banking',0,2,'Rahul',0,'Bank response',0,1),
+ mk('Employee master update','Sagenome Pvt Ltd','HR',5,3,'Anil',1,'',2,1),
+ mk('ROC annual filing','GRMS','Statutory Compliance',9,2,'Rahul',0,'',null,6),
+ mk('Draft partnership terms','GRMS','Company Formation',3,3,'Rahul',0,'',null,0)],sess:[]}}
+function load(){try{db=JSON.parse(localStorage.getItem(K))}catch(e){}if(!db)db=seed()}
+function save(){try{db.set=set;localStorage.setItem(K,JSON.stringify(db))}catch(e){}}
+load();Object.assign(set,db.set||{});
+const byId=id=>db.tasks.find(t=>t.id==id);
+const nextD=(d,r)=>{const x=new Date(d+'T12:00');r=='daily'?x.setDate(x.getDate()+1):r=='weekly'?x.setDate(x.getDate()+7):x.setMonth(x.getMonth()+1);return iso(x)};
+const log=(t,s)=>{t.log.push([now(),s]);t.upd=today();if(s.startsWith('Completed')&&t.rec&&!t.spawned){t.spawned=1;db.tasks.push({...t,id:Math.random().toString(36).slice(2,9),done:0,doneAt:'',note:'',notes:[],focus:0,subs:(t.subs||[]).map(x=>({n:x.n,d:0})),log:[[now(),'Created (recurring)']],due:nextD(t.due||today(),t.rec),stg:'todo',wait:'',fu:'',pp:0,spawned:0})}save()};
+// ---- intelligence
+function an(t){
+ const td=today(),R=[];let s=0;
+ const od=t.due?dd(td,t.due):-999,stale=dd(td,t.upd),fu=t.fu&&t.fu<=td;
+ const ds=t.due?-od:999;
+ if(od>0){s+=50+od*3;R.push(['r',`${od} day${od>1?'s':''} overdue`])}
+ else if(od==0){s+=30;R.push(['y','Due today'])}
+ else if(ds<=2){s+=18;R.push(['y',`Due in ${ds} day${ds>1?'s':''}`])}
+ s+=[0,25,15,6,0][t.pri];
+ if(t.pri==1)R.push(['r','Critical priority']);
+ if(fu){s+=25;R.push(['y',t.fu<td?'Follow-up overdue':'Follow-up due today'])}
+ if(t.wait){R.push(['y','Waiting for '+t.wait]);s+=6}
+ if(t.dl&&stale>=2){s+=12;R.push(['a',`Delegated to ${t.who}, no update for ${stale} days`])}
+ else if(stale>=3&&ds<=7){s+=10;R.push(['a',`No update for ${stale} days`])}
+ if(t.pp>0){s+=t.pp*4;R.push(['a',`Postponed ${t.pp}×`])}
+ const risk=od<=0&&ds<=3&&stale>=2||t.dl&&stale>=3||t.pp>=2;
+ const st=od>0?'r':risk?'a':(ds<=2||fu)?'y':'';
+ return{s,R,od,stale,fu,risk,st,ds}}
+const act=()=>db.tasks.filter(t=>!t.done&&(!fl.co||t.co==fl.co)&&(!fl.pr||t.proj==fl.pr)).map(t=>({t,a:an(t)}));
+// ---- render
+function card(x,showWhy=true,btns='ocfpr'){
+ const {t,a}=x,why=a.R.map(r=>`<div>${r[0]=='r'?'🔴':r[0]=='a'?'🟠':'🟡'} ${esc(r[1])}</div>`).join('');
+ const B={o:['Open','open'],c:['✓ Complete','done'],f:['📞 Follow Up','fu'],p:['▶ Focus','focus'],r:['📅 Reschedule','resch'],m:['💬 Comment','cmt']};
+ return`<div class="card ${a.st}"><div class="t">${esc(t.title)}</div><div class="m">${esc(t.co)} · ${esc(t.proj)} · 👤 ${esc(t.who)}${t.due?' · Due '+t.due:''}${t.focus?' · ⏱ '+t.focus+' min':''}</div>${showWhy?`<div class="why">${why||'<span class=m>On track</span>'}</div>`:''}<div class="btns">${[...btns].map(k=>`<button class="${k=='p'?'p':''}" data-a="${B[k][1]}" data-id="${t.id}">${B[k][0]}</button>`).join('')}</div></div>`}
+const sec=(h,items,fn,empty)=>`<h2>${h} <span class=m>(${items.length})</span></h2>`+(items.length?items.map(fn).join(''):`<div class="m">${empty||'Nothing here.'}</div>`);
+function renderHome(){
+ const A=act(),h=new Date().getHours(),g=h<12?'Morning':h<17?'Afternoon':'Evening';
+ const fm=db.sess.filter(s=>s.start.slice(0,10)==today()&&s.ok).reduce((a,s)=>a+s.min,0);
+ const att=[...A].sort((x,y)=>y.a.s-x.a.s).filter(x=>x.a.s>0).slice(0,5);
+ const over=A.filter(x=>x.a.od>0),risk=A.filter(x=>x.a.risk&&x.a.od<=0),fus=A.filter(x=>x.a.fu),dt=A.filter(x=>x.a.od==0);
+ const wt=A.filter(x=>x.t.wait),dl=A.filter(x=>x.t.dl),soon=A.filter(x=>x.a.ds>0&&x.a.ds<=7).sort((a,b)=>a.a.ds-b.a.ds);
+ const doNow=A.filter(x=>x.t.pri==1||x.a.od>=0||x.a.fu).sort((a,b)=>b.a.s-a.a.s);
+ const done=db.tasks.filter(t=>t.done&&t.doneAt&&t.doneAt.slice(0,10)==today());
+ const ch=(i,n,l,id)=>`<div class="chip" onclick="document.getElementById('${id}').scrollIntoView({behavior:'smooth'})">${i} <b>${n}</b>${l}</div>`;
+ const ph=prsA().map(p=>{const ts=db.tasks.filter(t=>t.proj==p&&(!fl.co||t.co==fl.co));const o=ts.filter(t=>!t.done),c=ts.length-o.length;return{p,o:o.length,od:o.filter(t=>an(t).od>0).length,r:o.filter(t=>{const a=an(t);return a.risk&&a.od<=0}).length,pc:ts.length?Math.round(c/ts.length*100):0,n:ts.length}}).filter(x=>x.n);
+ const first=att[0];
+ return `
+ <div class="hd"><div><h1>Good ${g}, Rahul</h1><div class="sub">${new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div></div>
+ <div style="display:flex;gap:6px"><select onchange="fl.co=this.value;render()" style="width:auto"><option value="">All Companies</option>${cosA().map(c=>`<option ${fl.co==c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+ <select onchange="fl.pr=this.value;render()" style="width:auto"><option value="">All Projects</option>${prsA().map(c=>`<option ${fl.pr==c?'selected':''}>${esc(c)}</option>`).join('')}</select></div></div>
+ <div class="bar">${ch('🔴',over.length,' Overdue','s-do')}${ch('🟠',risk.length,' At risk','s-risk')}${ch('🟡',fus.length,' Follow-ups','s-fu')}${ch('📅',dt.length,' Due today','s-do')}${ch('👥',dl.length,' Delegated','s-dl')}${ch('⏳',wt.length,' Waiting','s-wt')}<div class="chip">▶ <b>${fm}</b> focus min today</div></div>
+ ${first?`<div class="card" style="background:var(--blu)"><div class="m">Suggested first focus · based on your task data</div><div class="t">${esc(first.t.title)}</div><div class="why">${first.a.R.map(r=>esc(r[1])).join(' · ')}</div><button class="p" data-a="focus" data-id="${first.t.id}">▶ Start ${set.f}-min focus</button></div>`:''}
+ <h2 style="color:var(--tx)">🎯 My Attention</h2>${att.length?att.map(x=>card(x)).join(''):'<div class="m">All clear — nothing needs attention.</div>'}
+ <div id="s-do"></div>${sec('⚡ Do Now',doNow,x=>card(x,true,'cmfpr'))}
+ <div id="s-fu"></div>${sec('📞 Follow Up Now',fus,x=>card(x,true,'fmc'),'No follow-ups due.')}
+ <div id="s-wt"></div>${sec('⏳ Waiting For',wt,x=>`<div class="card"><div class="t">${esc(x.t.wait)} <span class=m>→ ${esc(x.t.title)}</span></div><div class="m">${esc(x.t.co)} · last update ${x.a.stale}d ago${x.t.fu?' · next follow-up '+x.t.fu:''}</div><div class="btns"><button data-a="fu" data-id="${x.t.id}">📞 Follow Up</button><button data-a="clrwait" data-id="${x.t.id}">Received</button></div></div>`)}
+ <div id="s-dl"></div><h2>👥 Delegated <span class=m>(${dl.length})</span></h2><div class="card sc"><table><tr><th>Person</th><th>Task</th><th>Due</th><th>Last update</th><th></th></tr>${dl.map(x=>`<tr><td>${esc(x.t.who)}</td><td>${esc(x.t.title)}</td><td>${x.t.due||'—'}</td><td>${x.a.stale}d ago${x.a.stale>=2?' 🟠':''}</td><td><button data-a="fu" data-id="${x.t.id}">Follow up</button></td></tr>`).join('')||'<tr><td class=m>None</td></tr>'}</table></div>
+ ${sec('📅 Due Soon (7 days)',soon,x=>card(x,false,'cfr'))}
+ <div id="s-risk"></div>${sec('🟠 At Risk',risk,x=>card(x),'Nothing at risk.')}
+ <h2>📊 Project Health</h2><div class="card sc"><table><tr><th>Project</th><th>Open</th><th>Overdue</th><th>At risk</th><th>Progress</th></tr>${ph.map(p=>`<tr><td>${esc(p.p)}</td><td>${p.o}</td><td>${p.od}</td><td>${p.r}</td><td>${p.pc}%</td></tr>`).join('')}</table></div>
+ <h2>✓ Completed Today <span class=m>(${done.length})</span></h2>${done.map(t=>`<div class="card g"><span class="t">✓ ${esc(t.title)}</span> <span class=m>${esc(t.note||'')}</span></div>`).join('')||'<div class="m">Nothing completed yet.</div>'}
+ <h2>Data</h2><div class="btns"><button onclick="bk()">⬇ Backup (JSON)</button><button onclick="csv()">⬇ Tasks CSV</button><button onclick="xl()">⬇ Excel</button><button onclick="pdf()">⬇ PDF</button><button onclick="clr()">Clear sample data</button><button onclick="rs()">⬆ Restore</button><button onclick="rst()">Reset sample data</button></div>`}
+// ---- modal helpers
+const M=h=>{mb.innerHTML=h;md.classList.add('on')},X=()=>md.classList.remove('on');
+function ask(title,fields,cb){M(`<h3 style="margin:0 0 6px">${title}</h3>${fields.map((f,i)=>`<label>${f[0]}</label>${f[1]=='ta'?`<textarea id="q${i}" rows=3></textarea>`:`<input id="q${i}" type="${f[1]}" value="${esc(f[2]||'')}">`}`).join('')}<div class="btns"><button class="p" id="qok">Save</button><button class="x" onclick="X()">Cancel</button></div>`);
+ qok.onclick=()=>{cb(fields.map((_,i)=>document.getElementById('q'+i).value));X();render()}}
+function addT(){M(`<h3 style="margin:0 0 6px">Quick Add</h3><input id="nlp" placeholder="Type naturally: Follow up with Biju on Friday 10 AM"><button onclick="nlGo()" style="margin:6px 0">Parse ↓</button><div class=m id="nlo"></div><label>Task</label><input id="n1"><label>Company</label><select id="n2">${cosA().map(c=>`<option>${esc(c)}</option>`).join('')}</select><label>Project</label><select id="n3">${prsA().map(c=>`<option>${esc(c)}</option>`).join('')}</select><label>Due date</label><input id="n4" type="date"><label>Person (blank = me)</label><input id="n5" list="pl" placeholder="e.g. Biju"><datalist id="pl">${db.people.map(p=>`<option value="${esc(p)}">`).join('')}</datalist><label>Priority</label><select id="n6"><option value=1>🔴 Critical</option><option value=2>🟠 High</option><option value=3 selected>🟡 Medium</option><option value=4>🟢 Low</option></select><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="n9" style="width:auto"> Also schedule as follow-up on due date</label><label>Repeat</label><select id="n7"><option value="">No</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select><div class="btns"><button class="p" id="nok">Save</button><button class="x" onclick="X()">Cancel</button></div>`);
+ nok.onclick=()=>{if(!n1.value.trim())return;const w=n5.value.trim();db.tasks.push({id:Math.random().toString(36).slice(2,9),title:n1.value.trim(),co:n2.value,proj:n3.value,due:n4.value,pri:+n6.value,who:w||'Rahul',dl:!!w&&w.toLowerCase()!='rahul',wait:'',fu:n9.checked?n4.value:'',upd:today(),pp:0,rec:n7.value,done:0,notes:[],focus:0,log:[[now(),'Created']]});save();X();render()}}
+// ---- actions
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const t=byId(b.dataset.id),a=b.dataset.a;if(!t)return;
+ if(a=='done'&&blocked(t))return M(`<h3 style="margin:0 0 6px">Blocked</h3><div>Complete “${esc(blocked(t).title)}” first.</div><div class="btns"><button class="x" onclick="X()">OK</button></div>`);
+ if(a=='done')ask('Complete: '+esc(t.title),[['Completion note','ta']],([n])=>{t.done=1;t.doneAt=now();t.note=n;log(t,'Completed'+(n?': '+n:''))});
+ if(a=='cmt')ask('Comment',[['Comment','ta']],([n])=>{if(n){t.notes.push([now(),n]);log(t,'Comment: '+n)}});
+ if(a=='fu')ask('Follow-up: '+esc(t.title),[['What happened?','ta'],['Next follow-up date','date',ad(2)]],([n,d])=>{t.fu=d;log(t,'Follow-up'+(n?': '+n:'')+(d?' → next '+d:''))});
+ if(a=='resch')ask('Reschedule',[['New due date','date',t.due||ad(1)]],([d])=>{if(d){t.due=d;t.pp++;log(t,'Due date changed to '+d)}});
+ if(a=='restore'){t.done=0;t.spawned=0;log(t,'Restored from Completed')}
+ if(a=='clrwait'){t.wait='';log(t,'Received — no longer waiting')}
+ if(a=='open')openT(t);
+ if(a=='focus'){X();startF(t)}render()});
+// ---- focus
+let F=null;
+function startF(t,mins){const m=mins||set.f;F={t,total:m*60,left:m*60,run:1,start:now(),mode:'f'};focus.classList.add('on');tick();clearInterval(F.iv);F.iv=setInterval(()=>{if(F.run&&--F.left<=0){clearInterval(F.iv);endF(1)}drawF()},1000);drawF()}
+function tick(){}
+const mmss=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function drawF(){if(!F||F.ended)return;fb.innerHTML=`<div class=m>${F.mode=='f'?'FOCUS MODE':'BREAK'}</div><h1>${esc(F.t.title)}</h1><div class=m>${esc(F.t.co)} · ${esc(F.t.proj)}</div><div class="tm">${mmss(F.left)}</div><div class=m>Due ${F.t.due||'—'} · Priority ${['','Critical','High','Medium','Low'][F.t.pri]}</div><div class="btns" style="justify-content:center;margin-top:18px">${F.mode=='f'&&!F.pre?`<button onclick="F.run=!F.run;drawF()">${F.run?'Pause':'Resume'}</button><button class="p" onclick="clearInterval(F.iv);endF(1)">Finish Session</button>`:''}<button class="x" onclick="cancelF()">${F.mode=='f'?'Cancel':'Skip break'}</button></div>${F.mode=='f'?`<div class="btns" style="justify-content:center"><span class=m>Presets:</span>${[[25,5],[50,10],[90,15]].map(p=>`<button class=x onclick="set.f=${p[0]};set.s=${p[1]};startF(F.t)">${p[0]}/${p[1]}</button>`).join('')}</div>`:''}`}
+function cancelF(){clearInterval(F.iv);if(F.mode=='f'&&F.total-F.left>=60)rec(0);F=null;focus.classList.remove('on');render()}
+function rec(ok,note){const min=Math.max(1,Math.round((F.total-F.left)/60));db.sess.push({id:Math.random().toString(36).slice(2,9),task:F.t.id,start:F.start,end:now(),planned:F.total/60,min,ok:!!ok,note:note||''});if(ok){F.t.focus+=min;log(F.t,`Focus session ${min} min`+(note?': '+note:''))}else save();return min}
+function endF(ok){if(F.mode=='b'){F=null;focus.classList.remove('on');render();return}
+ F.ended=1;const t=F.t,min=Math.max(1,Math.round((F.total-F.left)/60));
+ fb.innerHTML=`<h1>🎯 Focus session complete</h1><div class=m>${min} minutes · ${esc(t.title)}</div><label class=m style="display:block;margin-top:14px;text-align:left">What did you accomplish?</label><textarea id="acc" rows=3></textarea><div class=m style="margin:12px 0 4px">What next?</div><div class="btns" style="justify-content:center"><button class="p" onclick="nx('done')">✓ Complete</button><button onclick="nx('again')">▶ Another session</button><button onclick="nx('break')">☕ Break</button><button onclick="nx('fu')">📞 Follow up</button><button onclick="nx('wait')">⏳ Waiting for</button><button onclick="nx('resch')">📅 Reschedule</button><button class=x onclick="nx('cont')">Continue later</button></div>`}
+function nx(k){const t=F.t,note=acc.value;rec(1,note);const n=db.sess.filter(s=>s.ok&&s.start.slice(0,10)==today()).length;F=null;
+ if(k=='again')return startF(t);
+ if(k=='break'){const long=n%set.n==0,m=long?set.l:set.s;F={t,total:m*60,left:m*60,run:1,start:now(),mode:'b'};F.iv=setInterval(()=>{if(--F.left<=0){clearInterval(F.iv);endF(1)}drawF()},1000);return drawF()}
+ focus.classList.remove('on');
+ if(k=='done')ask('Complete: '+esc(t.title),[['Completion note','ta']],([x])=>{t.done=1;t.doneAt=now();t.note=x||note;log(t,'Completed')});
+ else if(k=='fu')ask('Follow-up',[['What happened?','ta'],['Next follow-up','date',ad(2)]],([x,d])=>{t.fu=d;log(t,'Follow-up: '+x)});
+ else if(k=='wait')ask('Waiting for…',[['Person / entity','text'],['Expected follow-up date','date',ad(3)]],([w,d])=>{t.wait=w;t.fu=d;log(t,'Waiting for '+w)});
+ else if(k=='resch')ask('Reschedule',[['New due date','date',ad(1)]],([d])=>{if(d){t.due=d;t.pp++;log(t,'Due date changed to '+d)}});
+ else render()}
+// ---- data
+async function dl(n,s,m){try{const d=window.claude&&await window.claude.use('downloads');if(d)return await d.save({filename:n,data:s}).catch(()=>{})}catch(e){}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:m}));a.download=n;a.click()}
+function bk(){dl('command-centre-backup-'+today()+'.json',JSON.stringify(db,null,1),'application/json')}
+function csv(){const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';dl('tasks.csv',['Title,Company,Project,Person,Due,Priority,Status,Focus min'].concat(db.tasks.map(t=>[t.title,t.co,t.proj,t.who,t.due,t.pri,t.done?'Done':'Open',t.focus].map(q).join(','))).join('\n'),'text/csv')}
+function rs(){M(`<h3 style="margin:0 0 6px">Restore backup</h3><div class=m>Your current data is downloaded automatically first.</div><input type="file" id="rf" accept=".json"><div class="btns"><button class="x" onclick="X()">Cancel</button></div>`);
+ rf.onchange=async()=>{try{const d=JSON.parse(await rf.files[0].text());if(!Array.isArray(d.tasks)||!Array.isArray(d.cos))throw 0;bk();db=d;save();X();render()}catch(e){alert('Invalid backup file — nothing was changed.')}}}
+function rst(){M(`<h3 style="margin:0 0 6px">Reset to sample data?</h3><div class=m>Replaces all current data. A backup downloads first.</div><div class="btns"><button class="p" id="ry">Reset</button><button class="x" onclick="X()">Cancel</button></div>`);ry.onclick=()=>{bk();db=seed();save();X();render()}}
+document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)){if(e.key=='Escape')X();return}
+ if(e.key=='n')addT();if(e.key=='Escape')X();if(e.key=='p'){const f=[...act()].sort((a,b)=>b.a.s-a.a.s)[0];if(f)startF(f.t)}});
+
+let view='home',cm=0;
+const stg=t=>t.stg||(t.wait?'wait':t.dl?'dl':'todo');
+const COLS=[['todo','To Do'],['doing','In Progress'],['wait','Waiting For'],['dl','Delegated'],['done','Done']];
+const filt=()=>`<div class="bar"><select onchange="fl.co=this.value;render()" style="width:auto"><option value="">All Companies</option>${cosA().map(c=>`<option ${fl.co==c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`;
+const nav0=()=>`<div class="bar" style="position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;padding:6px 0">${[['home','🏠 Command Centre'],['kan','🗂 Kanban'],['cal','📅 Calendar'],['rev','📊 Review']].map(v=>`<div class="chip" style="${view==v[0]?'background:var(--ac);color:#fff':''}" onclick="view='${v[0]}';render()">${v[1]}</div>`).join('')}</div>`;
+function render(){app.innerHTML=nav()+({home:renderHome,kan:kanban,cal:calendar,rev:review}[view])()}
+const dot=a=>a=='r'?'🔴':a=='a'?'🟠':'🟡';
+const kc=({t,a})=>`<div class="card ${t.done?'g':a.st}" draggable="true" ondragstart="event.dataTransfer.setData('t','${t.id}')" style="padding:9px 10px;cursor:grab"><div class="t" style="font-size:14px">${esc(t.title)}</div><div class="m">${esc(t.proj)} · 👤 ${esc(t.who)}${t.due?' · '+t.due:''}${t.wait&&stg(t)=='wait'?' · ⏳ '+esc(t.wait):''}</div>${a.R[0]&&!t.done?`<div class="why">${dot(a.R[0][0])} ${esc(a.R[0][1])}</div>`:''}<div class="btns"><button data-a="open" data-id="${t.id}">Open</button>${t.done?'':`<button class="p" data-a="focus" data-id="${t.id}">▶</button>`}<select style="width:auto;padding:4px" onchange="mv('${t.id}',this.value)"><option>Move…</option>${COLS.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}</select></div></div>`;
+function kanban(){const A=act(),dn=db.tasks.filter(t=>t.done&&(!fl.co||t.co==fl.co)).sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||'')).slice(0,10);
+ return filt()+`<div style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(235px,1fr);gap:10px;overflow-x:auto;align-items:start">${COLS.map(([k,n])=>{const xs=k=='done'?dn.map(t=>({t,a:an(t)})):A.filter(x=>stg(x.t)==k).sort((a,b)=>b.a.s-a.a.s);return `<div ondragover="event.preventDefault()" ondrop="drop(event,'${k}')" style="background:var(--blu);border-radius:14px;padding:8px;min-height:160px"><div class="t" style="margin:2px 4px 8px">${n} <span class=m>${xs.length}</span></div>${xs.map(kc).join('')}</div>`}).join('')}</div><div class="m" style="margin-top:8px">Drag cards between columns, or use “Move…”. Dropping on Done completes; dragging a Done card back restores it.</div>`}
+function drop(e,k){e.preventDefault();mv(e.dataTransfer.getData('t'),k)}
+function mv(id,k){const t=byId(id);if(!t||k=='Move…')return render();
+ if(t.done&&k!='done'){t.done=0;t.spawned=0;log(t,'Restored from Completed')}
+ else if(t.done||stg(t)==k)return render();
+ if(k=='done'&&blocked(t)){render();return M(`<h3 style="margin:0 0 6px">Blocked</h3><div>Complete “${esc(blocked(t).title)}” first.</div><div class="btns"><button class="x" onclick="X()">OK</button></div>`)}
+ if(k=='done')return ask('Complete: '+esc(t.title),[['Completion note','ta']],([n])=>{t.done=1;t.doneAt=now();t.note=n;log(t,'Completed')});
+ if(k=='wait')return ask('Waiting for…',[['Person / entity','text']],([w])=>{t.wait=w||'someone';t.stg='wait';log(t,'Moved to Waiting for '+t.wait)});
+ if(k=='dl')return ask('Delegate to',[['Person','text',t.who!='Rahul'?t.who:'']],([w])=>{if(w){t.who=w;t.dl=true;t.stg='dl';log(t,'Delegated to '+w)}});
+ t.stg=k;if(k=='todo'||k=='doing')t.wait='';log(t,'Moved to '+COLS.find(c=>c[0]==k)[1]);render()}
+function calendar(){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+cm);const y=d.getFullYear(),m=d.getMonth(),n=new Date(y,m+1,0).getDate(),td=today(),ev={};
+ act().forEach(({t,a})=>{if(t.due)(ev[t.due]=ev[t.due]||[]).push([a.st=='r'?'🔴':'📌',t]);if(t.fu)(ev[t.fu]=ev[t.fu]||[]).push(['📞',t])});
+ db.sess.forEach(s=>{const t=byId(s.task);if(t&&s.ok)(ev[s.start.slice(0,10)]=ev[s.start.slice(0,10)]||[]).push(['▶',t])});
+ let c='';for(let i=0;i<d.getDay();i++)c+='<div></div>';
+ for(let i=1;i<=n;i++){const k=iso(new Date(y,m,i)),e=ev[k]||[];c+=`<div class="card" style="min-height:84px;padding:5px;margin:0;${k==td?'outline:2px solid var(--ac)':''}"><div class=m>${i}</div>${e.slice(0,3).map(x=>`<div style="font-size:11px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" data-a="open" data-id="${x[1].id}">${x[0]} ${esc(x[1].title)}</div>`).join('')}${e.length>3?`<div class=m style="font-size:11px">+${e.length-3} more</div>`:''}</div>`}
+ return filt()+`<div class="hd"><button onclick="cm--;render()">‹</button><h1>${d.toLocaleDateString(undefined,{month:'long',year:'numeric'})}</h1><button onclick="cm++;render()">›</button></div><div class="m" style="margin-top:4px">📌 due · 📞 follow-up · ▶ focus session</div><div class="sc"><div style="display:grid;grid-template-columns:repeat(7,minmax(70px,1fr));gap:4px;margin-top:8px">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x=>`<div class=m style="text-align:center">${x}</div>`).join('')}${c}</div></div>`}
+function review(){const td=today(),w=ad(-7),A=act(),T=db.tasks,dn=x=>x.doneAt&&x.doneAt.slice(0,10),ok=db.sess.filter(s=>s.ok),sum=a=>a.reduce((x,s)=>x+s.min,0);
+ const fT=ok.filter(s=>s.start.slice(0,10)==td),fW=ok.filter(s=>s.start.slice(0,10)>=w),pf={};
+ fW.forEach(s=>{const t=byId(s.task);if(t)pf[t.proj]=(pf[t.proj]||0)+s.min});
+ const li=t=>`<div class="card" style="padding:8px 12px"><span class="t">${esc(t.title)}</span> <span class=m>${esc(t.proj)} · ${t.due||'no due date'}</span> <button data-a="open" data-id="${t.id}">Open</button></div>`;
+ const L=(h,xs)=>`<h2>${h} <span class=m>(${xs.length})</span></h2>${xs.map(li).join('')||'<div class=m>None</div>'}`;
+ const st=(n,l)=>`<div class="chip"><b>${n}</b> ${l}</div>`,top=[...A].sort((a,b)=>b.a.s-a.a.s).slice(0,5).map(x=>x.t);
+ return filt()+`<h1>End of Day</h1><div class="bar">${st(T.filter(t=>t.done&&dn(t)==td).length,'completed today')}${st(A.filter(x=>x.a.od>0).length,'overdue')}${st(fT.length,'focus sessions')}${st(sum(fT),'focus min')}</div>
+ ${L('Completed today',T.filter(t=>t.done&&dn(t)==td))}${L('Still pending today',A.filter(x=>x.a.od>=0&&x.a.od<=0||x.a.od>0).map(x=>x.t))}${L('Missed follow-ups',A.filter(x=>x.t.fu&&x.t.fu<td).map(x=>x.t))}${L("Tomorrow's priorities",top)}
+ <h1 style="margin-top:28px">Weekly Review</h1><div class="bar">${st(T.filter(t=>t.log[0][0].slice(0,10)>=w).length,'created')}${st(T.filter(t=>t.done&&dn(t)>=w).length,'completed')}${st(A.filter(x=>x.a.od>0).length,'overdue')}${st(fW.length,'focus sessions')}${st(sum(fW),'focus min')}</div>
+ ${L('No update for 5+ days',A.filter(x=>x.a.stale>=5).map(x=>x.t))}${L('Delegated, needing a nudge',A.filter(x=>x.t.dl&&x.a.stale>=2).map(x=>x.t))}
+ <h2>Focus by project (7 days)</h2><div class="card">${Object.entries(pf).sort((a,b)=>b[1]-a[1]).map(([p,m])=>`<div>${esc(p)} — ${m} min</div>`).join('')||'<span class=m>No sessions yet.</span>'}</div>
+ ${fstats()}<div class="btns"><button onclick="xl()">⬇ Export Excel</button><button onclick="csv()">⬇ CSV</button><button onclick="pdf()">⬇ PDF</button></div>`}
+function openT(t){const s=t.subs||[],p=s.length?Math.round(s.filter(x=>x.d).length/s.length*100)+'%':'';
+ M(`<h3 style="margin:0">${esc(t.title)}</h3><div class=m>${esc(t.co)} · ${esc(t.proj)} · 👤 ${esc(t.who)} · ⏱ ${t.focus} min${t.rec?' · 🔁 '+t.rec:''}</div><h2>Subtasks ${p}</h2>${s.map((x,i)=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0;font-size:14px;color:var(--tx)"><input type="checkbox" style="width:auto" ${x.d?'checked':''} onchange="subT('${t.id}',${i})">${esc(x.n)}</label>`).join('')||'<div class=m>None</div>'}<div class="btns"><button onclick="addSub('${t.id}')">+ Subtask</button><button data-a="cmt" data-id="${t.id}">💬 Comment</button></div><h2>Comments</h2>${t.notes.map(n=>`<div class=m>${new Date(n[0]).toLocaleString()} — ${esc(n[1])}</div>`).join('')||'<div class=m>None</div>'}<h2>History</h2>${[...t.log].reverse().map(l=>`<div class=m>${new Date(l[0]).toLocaleString()} — ${esc(l[1])}</div>`).join('')}<div class="btns"><button class="x" onclick="X()">Close</button></div>`)}
+function subT(id,i){const t=byId(id);t.subs[i].d^=1;log(t,'Subtask '+(t.subs[i].d?'done: ':'reopened: ')+t.subs[i].n);openT(t);render()}
+function addSub(id){const t=byId(id);ask('Add subtask',[['Subtask','text']],([n])=>{if(n){(t.subs=t.subs||[]).push({n,d:0});log(t,'Subtask added: '+n)}})}
+function xl(){if(!window.XLSX)return alert('Excel library did not load');const w=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(db.tasks.map(t=>({Title:t.title,Company:t.co,Project:t.proj,Person:t.who,Due:t.due,Priority:t.pri,Status:t.done?'Done':'Open',Waiting:t.wait,'Focus min':t.focus}))),'Tasks');
+ XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(db.sess.map(s=>({Task:(byId(s.task)||{}).title,Start:s.start,Minutes:s.min,Completed:s.ok,Note:s.note}))),'Focus');
+ dl('command-centre-'+today()+'.xlsx',XLSX.write(w,{type:'array',bookType:'xlsx'}),'application/octet-stream')}
+
+let blkSet=new Set(),lf='all',lp='',lpr='',lim=100,q='';
+const cosA=()=>db.cos.filter(c=>!(db.arch||[]).includes(c)),prsA=()=>db.prs.filter(c=>!(db.arch||[]).includes(c));
+const blocked=t=>{const b=t.dep&&byId(t.dep);return b&&!b.done?b:null};
+function an(t){
+ const td=today(),R=[];let s=0;
+ const od=t.due?dd(td,t.due):-999,stale=dd(td,t.upd),fu=t.fu&&t.fu<=td,ds=t.due?-od:999;
+ if(od>0){s+=50+od*3;R.push(['r',`${od} day${od>1?'s':''} overdue`])}
+ else if(od==0){s+=30;R.push(['y','Due today'])}
+ else if(ds<=set.soon){s+=18;R.push(['y',`Due in ${ds} day${ds>1?'s':''}`])}
+ s+=[0,25,15,6,0][t.pri];
+ if(t.pri==1)R.push(['r','Critical priority']);
+ if(od>=set.esc){s+=15;R.push(['r','Escalation: '+od+' days overdue'])}
+ if(fu){s+=25;R.push(['y',t.fu<td?'Follow-up overdue':'Follow-up due today'])}
+ if(t.wait){R.push(['y','Waiting for '+t.wait]);s+=6}
+ if(t.dl&&stale>=set.stale){s+=12;R.push(['a',`Delegated to ${t.who}, no update for ${stale} days`])}
+ else if(stale>=set.stale&&ds<=7){s+=10;R.push(['a',`No update for ${stale} days`])}
+ if(t.pp>0){s+=t.pp*4;R.push(['a',`Postponed ${t.pp}×`])}
+ const b=blocked(t);if(b){s+=4;R.push(['a','Blocked by: '+b.title])}
+ if(blkSet.has(t.id)){s+=10;R.push(['y','Blocking another task'])}
+ const risk=od<=0&&ds<=set.soon&&stale>=set.stale||t.dl&&stale>=set.stale||t.pp>=2||!!b;
+ const st=od>0?'r':risk?'a':(ds<=set.soon||fu)?'y':'';
+ return{s,R,od,stale,fu,risk,st,ds}}
+const nav=()=>`<div class="bar" style="position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;padding:6px 0">${[['home','🏠 Home'],['kan','🗂 Kanban'],['cal','📅 Calendar'],['lst','📋 Tasks'],['rev','📊 Review'],['srch','🔍 Search'],['set','⚙ Setup']].map(v=>`<div class="chip" style="${view==v[0]?'background:var(--ac);color:#fff':''}" onclick="view='${v[0]}';render()">${v[1]}</div>`).join('')}<div class="chip" onclick="bell()">🔔 ${notes().length}</div></div>`;
+function render(){blkSet=new Set(db.tasks.filter(x=>!x.done&&x.dep).map(x=>x.dep));app.innerHTML=nav()+({home:renderHome,kan:kanban,cal:calendar,rev:review,lst:list,srch:search,set:setup}[view])()}
+function notes(){const td=today(),o=[];act().forEach(({t,a})=>{if(a.od>0)o.push(['🔴','Overdue: '+t.title,t.id]);else if(a.od==0)o.push(['🟡','Due today: '+t.title,t.id]);if(a.fu)o.push(['📞','Follow-up: '+t.title,t.id]);if(t.rd!=null&&t.rd!==''&&t.due&&dd(t.due,td)==+t.rd)o.push(['🔔','Reminder ('+t.rd+'d before): '+t.title,t.id]);if(t.dl&&a.stale>=set.stale)o.push(['👥','No update from '+t.who+': '+t.title,t.id])});return o}
+function bell(){const n=notes();M(`<h3 style="margin:0 0 6px">${n.length?n.length+' item'+(n.length>1?'s':'')+' require your attention today':'Nothing needs attention'}</h3>${n.slice(0,30).map(x=>`<div class="hd" style="padding:4px 0"><span>${x[0]} ${esc(x[1])}</span><button data-a="open" data-id="${x[2]}">Open</button></div>`).join('')}<div class="btns"><button class="x" onclick="X()">Close</button></div>`)}
+function ping(){try{if(set.nt=='off'||!window.Notification||Notification.permission!='granted')return;const n=notes().length,sg=today()+(set.nt=='imm'?':'+n:'');if(n&&set.last!=sg){new Notification('Command Centre',{body:n+' item'+(n>1?'s':'')+' require your attention today'});set.last=sg;save()}}catch(e){}}
+function nl(s){const l=s.toLowerCase(),W=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];let d='',tm='',who='',m;
+ if(/\btoday\b/.test(l))d=today();else if(/\btomorrow\b/.test(l))d=ad(1);
+ if(m=l.match(/\bin (\d+) days?\b/))d=ad(+m[1]);
+ W.forEach((w,i)=>{if(new RegExp('\\b'+w+'\\b').test(l))d=ad((i-new Date().getDay()+7)%7||7)});
+ if(m=l.match(/\b(\d{1,2})(?::(\d\d))?\s*(am|pm)\b/))tm=String(+m[1]%12+(m[3]=='pm'?12:0)).padStart(2,'0')+':'+(m[2]||'00');
+ db.people.forEach(p=>{if(l.includes(p.toLowerCase()))who=p});
+ const title=s.replace(/\b(on |by |at )?(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/ig,'').replace(/\b(at )?\d{1,2}(:\d\d)?\s*(am|pm)\b/ig,'').replace(/\bin \d+ days?\b/ig,'').replace(/\s+/g,' ').trim();
+ return{title,d,tm,who,fu:/^(follow ?up|call|remind)/.test(l)}}
+function nlGo(){const r=nl(nlp.value);if(!r.title)return;n1.value=r.title+(r.tm?' ('+r.tm+')':'');n4.value=r.d;n5.value=r.who;n9.checked=r.fu;nlo.textContent='Parsed — review the fields below, then Save.'}
+function list(){const F={all:x=>!x.t.done,od:x=>!x.t.done&&x.a.od>0,fu:x=>!x.t.done&&x.a.fu,wt:x=>!x.t.done&&x.t.wait,dl:x=>!x.t.done&&x.t.dl,risk:x=>!x.t.done&&x.a.risk,due:x=>!x.t.done&&x.a.ds>=0&&x.a.ds<=7,done:x=>x.t.done,all2:x=>1};
+ const base=db.tasks.filter(t=>(!fl.co||t.co==fl.co)&&(!lp||t.who==lp)&&(!lpr||t.pri==lpr)).map(t=>({t,a:an(t)}));
+ const rows=base.filter(F[lf]).sort((a,b)=>lf=='done'?(b.t.doneAt||'').localeCompare(a.t.doneAt||''):b.a.s-a.a.s);
+ const sel=(v,o,fn)=>`<select style="width:auto" onchange="${fn}=this.value;lim=100;render()">${o.map(x=>`<option value="${x[0]}" ${v==x[0]?'selected':''}>${x[1]}</option>`).join('')}</select>`;
+ const pg=t=>{const u=t.subs||[];return t.done?'100%':u.length?Math.round(u.filter(x=>x.d).length/u.length*100)+'%':'—'};
+ const ch=(n,l)=>`<div class="chip"><b>${n}</b> ${l}</div>`;
+ return filt()+`<div class="bar">${sel(lf,[['all','Open'],['od','🔴 Overdue'],['due','📅 Due 7 days'],['fu','🔔 Follow-ups'],['wt','⏳ Waiting for'],['dl','👥 Delegated'],['risk','🟠 At risk'],['done','✓ Completed'],['all2','Everything']],'lf')}${sel(lp,[['','Any person'],...[...new Set(db.tasks.map(t=>t.who))].map(w=>[w,w])],'lp')}${sel(lpr,[['','Any priority'],[1,'Critical'],[2,'High'],[3,'Medium'],[4,'Low']],'lpr')}</div><div class="bar">${ch(base.length,'total')}${ch(base.filter(x=>x.t.done).length,'completed')}${ch(base.filter(F.od).length,'overdue')}${ch(base.filter(F.risk).length,'at risk')}${ch(base.filter(F.wt).length,'waiting')}${ch(base.filter(F.dl).length,'delegated')}</div>
+ <div class="card sc"><table><tr><th>Company</th><th>Project</th><th>Task</th><th>Person</th><th>Due</th><th></th><th>Progress</th><th>Updated</th><th>Next f/u</th><th></th></tr>${rows.slice(0,lim).map(({t,a})=>`<tr><td>${esc(t.co)}</td><td>${esc(t.proj)}</td><td>${esc(t.title)}</td><td>${esc(t.who)}</td><td>${t.due||'—'}</td><td>${t.done?'🟢':({r:'🔴',a:'🟠',y:'🟡'}[a.st]||'⚪')}</td><td>${pg(t)}</td><td>${t.upd}</td><td>${t.fu||'—'}</td><td><button data-a="open" data-id="${t.id}">Open</button>${t.done?`<button data-a="restore" data-id="${t.id}">Restore</button>`:''}</td></tr>`).join('')||'<tr><td class=m>No tasks match.</td></tr>'}</table></div>${rows.length>lim?`<div class="btns"><button onclick="lim+=100;render()">Show more (${rows.length-lim})</button></div>`:''}<div class="btns"><button onclick="csv()">⬇ CSV</button><button onclick="xl()">⬇ Excel</button><button onclick="pdf()">⬇ PDF</button></div>`}
+function sres(){const s=q.trim().toLowerCase();if(s.length<2)return '<div class=m>Type at least 2 characters.</div>';
+ const hit=db.tasks.filter(t=>[t.title,t.co,t.proj,t.who,t.wait,t.next,t.note,...(t.notes||[]).map(n=>n[1]),...(t.log||[]).map(l=>l[1]),...(t.subs||[]).map(x=>x.n),...(t.att||[]).map(x=>x.n)].join(' ').toLowerCase().includes(s)).slice(0,60);
+ const ent=[...db.cos,...db.prs,...db.people].filter(x=>x.toLowerCase().includes(s));
+ return(ent.length?`<h2>Companies · projects · people</h2><div class="card">${ent.map(esc).join(' · ')}</div>`:'')+`<h2>Tasks (${hit.length})</h2>`+hit.map(t=>`<div class="card" style="padding:8px 12px"><span class="t">${t.done?'✓ ':''}${esc(t.title)}</span> <span class=m>${esc(t.co)} · ${esc(t.proj)} · ${esc(t.who)}</span> <button data-a="open" data-id="${t.id}">Open</button></div>`).join('')}
+function search(){return `<input id="qi" placeholder="Search tasks, comments, history, attachments, people…" value="${esc(q)}" oninput="q=this.value;sr.innerHTML=sres()"><div id="sr">${sres()}</div>`}
+function setup(){const ar=db.arch||[],pi=db.pinfo||{};
+ const row=(k,i,x)=>{const inf=k=='people'?[(pi[x]||{}).des,(pi[x]||{}).ph,(pi[x]||{}).em].filter(Boolean).join(' · '):'',c=(db.cc||{})[x]||[];return `<div class="hd" style="padding:4px 0;${ar.includes(x)?'opacity:.5':''}"><span>${esc(x)}<span class=m>${inf?' · '+esc(inf):''}</span>${c.length?`<div class=m>💬 ${esc(c[c.length-1][1])}</div>`:''}</span><span><button onclick="cm2('${k}',${i})">💬${c.length||''}</button><button onclick="arc('${k}',${i})">${ar.includes(x)?'Restore':'Archive'}</button></span></div>`};
+ const blk=(h,k)=>`<h2>${h}</h2><div class="card">${db[k].map((x,i)=>row(k,i,x)).join('')}<div class="btns"><button class="p" onclick="addM('${k}')">+ Add</button></div></div>`;
+ const f=(l,k)=>`<label class=m style="display:block;margin-top:6px">${l}</label><input type="number" value="${set[k]}" onchange="set.${k}=Math.max(1,+this.value);save()">`;
+ return blk('Companies','cos')+blk('Projects','prs')+blk('People','people')+`<h2>Settings</h2><div class="card">${f('Focus minutes','f')}${f('Short break (min)','s')}${f('Long break (min)','l')}${f('Focus sessions before long break','n')}${f('Flag as no-update after (days)','stale')}${f('Due-soon window (days)','soon')}${f('Escalate after (days overdue)','esc')}<label class=m style="display:block;margin-top:6px">Notifications</label><select onchange="set.nt=this.value;save()">${[['daily','Daily summary'],['imm','Immediately'],['off','Disabled']].map(o=>`<option value="${o[0]}" ${set.nt==o[0]?'selected':''}>${o[1]}</option>`).join('')}</select><div class="btns"><button onclick="window.Notification?Notification.requestPermission().then(r=>alert('Browser notifications: '+r)):alert('Not supported here')">Enable browser notifications</button></div><div class=m>Email notifications need a server, so they are not available in this version.</div></div>`}
+function addM(k){k=='people'?ask('Add person',[['Name','text'],['Designation','text'],['Phone','text'],['Email','text']],([n,d,p,e])=>{if(n&&!db.people.includes(n)){db.people.push(n);(db.pinfo=db.pinfo||{})[n]={des:d,ph:p,em:e};save()}}):ask('Add',[['Name','text']],([n])=>{if(n&&!db[k].includes(n)){db[k].push(n);save()}})}
+function arc(k,i){const x=db[k][i];db.arch=db.arch||[];const j=db.arch.indexOf(x);j<0?db.arch.push(x):db.arch.splice(j,1);save();render()}
+function cm2(k,i){const x=db[k][i];ask('Comment on '+esc(x),[['Comment','ta']],([n])=>{if(n){((db.cc=db.cc||{})[x]=db.cc[x]||[]).push([now(),n]);save()}})}
+function fstats(){const ok=db.sess.filter(x=>x.ok),td=today(),w=ad(-7),mo=td.slice(0,7),f=c=>ok.filter(x=>c(x.start.slice(0,10))),sm=a=>a.reduce((x,y)=>x+y.min,0),T=f(d=>d==td),W=f(d=>d>=w),Mo=f(d=>d.slice(0,7)==mo),by={};
+ ok.forEach(x=>by[x.task]=(by[x.task]||0)+x.min);
+ return `<h2>Focus statistics</h2><div class="card"><div>Today: ${T.length} sessions · ${sm(T)} min · ${new Set(T.map(x=>x.task)).size} tasks</div><div>This week: ${W.length} sessions · ${sm(W)} min</div><div>This month: ${Mo.length} sessions · ${sm(Mo)} min</div><div>Average session: ${ok.length?Math.round(sm(ok)/ok.length):0} min</div><h2>Most focused tasks</h2>${Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([i,m])=>`<div>${esc((byId(i)||{}).title)} — ${m} min</div>`).join('')||'<span class=m>None yet</span>'}</div>`}
+function edit(id){const t=byId(id);ask('Edit task',[['Title','text',t.title],['Due date','date',t.due],['Priority (1 Critical … 4 Low)','number',t.pri],['Person','text',t.who],['Waiting for','text',t.wait||''],['Next action','text',t.next||''],['Remind days before due (blank = none)','number',t.rd??'']],([a,b,c,d,e,f,g])=>{if(a)t.title=a;if(b!=t.due){t.due=b;log(t,'Due date changed to '+(b||'none'))}if(+c>=1&&+c<=4&&+c!=t.pri){t.pri=+c;log(t,'Priority changed to '+c)}if(d&&d!=t.who){t.who=d;t.dl=d.toLowerCase()!='rahul';log(t,'Delegated to '+d)}t.wait=e;t.next=f;t.rd=g;log(t,'Edited')})}
+function dep(id,v){const t=byId(id);t.dep=v;log(t,v?'Blocked by: '+byId(v).title:'Dependency removed');openT(t);render()}
+function addAtt(id,el){const f=el.files[0],t=byId(id);if(!f)return;const r=new FileReader();r.onload=()=>{(t.att=t.att||[]).push({n:f.name,sz:f.size,d:today(),u:f.size<=300000?r.result:''});log(t,'Attachment added: '+f.name);openT(t);render()};r.readAsDataURL(f)}
+function getAtt(id,i){const a=byId(id).att[i];dl(a.n,Uint8Array.from(atob(a.u.split(',')[1]),c=>c.charCodeAt(0)))}
+function openT(t){const u=t.subs||[],p=u.length?Math.round(u.filter(x=>x.d).length/u.length*100)+'%':'',b=blocked(t),att=t.att||[];
+ const opts=db.tasks.filter(x=>!x.done&&x.id!=t.id).slice(0,200).map(x=>`<option value="${x.id}" ${t.dep==x.id?'selected':''}>${esc(x.title)}</option>`).join('');
+ M(`<h3 style="margin:0">${esc(t.title)}</h3><div class=m>${esc(t.co)} · ${esc(t.proj)} · 👤 ${esc(t.who)} · ⏱ ${t.focus} min${t.rec?' · 🔁 '+t.rec:''}</div>${t.next?`<div class="why">Next: ${esc(t.next)}</div>`:''}${b?`<div class="why">⛔ Blocked by ${esc(b.title)}</div>`:''}<div class="btns"><button onclick="edit('${t.id}')">📝 Edit</button><button class="p" data-a="focus" data-id="${t.id}">▶ Focus</button><button data-a="done" data-id="${t.id}">✓ Complete</button><button data-a="cmt" data-id="${t.id}">💬</button><button data-a="fu" data-id="${t.id}">📞</button></div>
+ <h2>Blocked by</h2><select onchange="dep('${t.id}',this.value)"><option value="">None</option>${opts}</select>
+ <h2>Subtasks ${p}</h2>${u.map((x,i)=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0;font-size:14px;color:var(--tx)"><input type="checkbox" style="width:auto" ${x.d?'checked':''} onchange="subT('${t.id}',${i})">${esc(x.n)}</label>`).join('')||'<div class=m>None</div>'}<div class="btns"><button onclick="addSub('${t.id}')">+ Subtask</button></div>
+ <h2>Attachments</h2>${att.map((x,i)=>`<div class="hd" style="padding:3px 0"><span>📎 ${esc(x.n)} <span class=m>${Math.round(x.sz/1024)} KB</span></span>${x.u?`<button onclick="getAtt('${t.id}',${i})">⬇</button>`:'<span class=m>name only (over 300 KB)</span>'}</div>`).join('')||'<div class=m>None</div>'}<input type="file" id="af" style="display:none" onchange="addAtt('${t.id}',this)"><div class="btns"><button onclick="af.click()">📎 Attach file</button></div>
+ <h2>Comments</h2>${t.notes.map(n=>`<div class=m>${new Date(n[0]).toLocaleString()} — ${esc(n[1])}</div>`).join('')||'<div class=m>None</div>'}<h2>History</h2>${[...t.log].reverse().map(l=>`<div class=m>${new Date(l[0]).toLocaleString()} — ${esc(l[1])}</div>`).join('')}<div class="btns"><button class="x" onclick="X()">Close</button></div>`)}
+function pdf(){if(!window.jspdf)return alert('PDF library did not load');const d=new jspdf.jsPDF();let y=14;d.setFontSize(14);d.text('Active tasks — '+today(),10,y);d.setFontSize(9);db.tasks.filter(t=>!t.done).forEach(t=>{y+=6;if(y>285){d.addPage();y=14}d.text(`${t.due||'—'} | ${['','Critical','High','Med','Low'][t.pri]} | ${t.who} | ${t.title} (${t.co})`.slice(0,115),10,y)});dl('active-tasks-'+today()+'.pdf',d.output('arraybuffer'),'application/pdf')}
+function clr(){M(`<h3 style="margin:0 0 6px">Clear all tasks and focus sessions?</h3><div class=m>Companies, projects and people are kept. A backup downloads first.</div><div class="btns"><button class="p" id="cy">Clear</button><button class="x" onclick="X()">Cancel</button></div>`);cy.onclick=()=>{bk();db.tasks=[];db.sess=[];save();X();render()}}
+function rs(){M(`<h3 style="margin:0 0 6px">Restore backup</h3><div class=m>Your current data downloads first. An invalid file changes nothing.</div><label>Mode</label><select id="rmode"><option value="r">Replace database</option><option value="m">Merge (add missing records)</option></select><label>Backup file (.json)</label><input type="file" id="rf" accept=".json"><div class="btns"><button class="x" onclick="X()">Cancel</button></div>`);
+ rf.onchange=async()=>{try{const d=JSON.parse(await rf.files[0].text());if(!Array.isArray(d.tasks)||!Array.isArray(d.cos)||!d.tasks.every(t=>t.id&&t.title&&t.log))throw 0;bk();
+ if(rmode.value=='r'){db=d;Object.assign(set,db.set||{})}else{const ids=new Set(db.tasks.map(t=>t.id));d.tasks.forEach(t=>{if(!ids.has(t.id))db.tasks.push(t)});['cos','prs','people'].forEach(k=>(d[k]||[]).forEach(x=>{if(!db[k].includes(x))db[k].push(x)}));const si=new Set(db.sess.map(x=>x.id));(d.sess||[]).forEach(x=>{if(!si.has(x.id))db.sess.push(x)})}
+ save();X();render()}catch(e){alert('Invalid backup file — nothing was changed.')}}}
+document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||md.classList.contains('on')||focus.classList.contains('on'))return;const k=e.key;
+ if(k=='/'){e.preventDefault();view='srch';render();setTimeout(()=>window.qi&&qi.focus())}
+ else if(k=='t'){view='home';render()}else if(k=='c'){view='cal';render()}else if(k=='f'){view='lst';lf='fu';render()}else if(k=='d'){view='lst';lf='dl';render()}});
+ping();setInterval(ping,60000);
+render();setInterval(()=>{if(!F&&!md.classList.contains('on'))render()},60000);
+</script></body></html>
