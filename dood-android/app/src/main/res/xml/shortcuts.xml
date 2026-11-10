@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_task"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_new"
+        android:shortcutLongLabel="@string/sc_new_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dood.app"
+            android:targetClass="com.dood.app.MainActivity">
+            <extra android:name="act" android:value="quickadd" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="reviews"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_reviews"
+        android:shortcutLongLabel="@string/sc_reviews_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dood.app"
+            android:targetClass="com.dood.app.MainActivity">
+            <extra android:name="link" android:value="reviews" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="calendar"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_calendar"
+        android:shortcutLongLabel="@string/sc_calendar_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dood.app"
+            android:targetClass="com.dood.app.MainActivity">
+            <extra android:name="link" android:value="calendar" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="phone_settings"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_settings"
+        android:shortcutLongLabel="@string/sc_settings_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dood.app"
+            android:targetClass="com.dood.app.MainActivity">
+            <extra android:name="act" android:value="settings" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="chats"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_chats"
+        android:shortcutLongLabel="@string/sc_chats_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.dood.app"
+            android:targetClass="com.dood.app.ChatListActivity" />
+    </shortcut>
+</shortcuts>

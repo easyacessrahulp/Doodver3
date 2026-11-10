@@ -1,7 +1,7 @@
 <resources>
     <style name="Theme.Dood" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">#0F766E</item>
-        <item name="android:navigationBarColor">#F7F7F5</item>
-        <item name="android:windowBackground">#F7F7F5</item>
+        <item name="android:statusBarColor">#0B3D91</item>
+        <item name="android:navigationBarColor">#F2F6FD</item>
+        <item name="android:windowBackground">#F2F6FD</item>
     </style>
 </resources>

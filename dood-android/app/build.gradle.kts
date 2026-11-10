@@ -11,8 +11,8 @@ android {
         applicationId = "com.dood.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     // A fixed key kept in this repository, so every build can update the one before it.

@@ -24,9 +24,12 @@ class AlertWorker(context: Context, params: WorkerParameters) : Worker(context, 
 
     override fun doWork(): Result {
         val ctx = applicationContext
+        if (Quiet.now(ctx)) return Result.success()      // quiet hours chosen on this phone: show them later
         val base = Prefs.url(ctx) ?: return Result.success()
         val cookie = CookieManager.getInstance().getCookie(base)
         if (cookie.isNullOrEmpty()) return Result.success()      // not signed in yet
+        try { Extras.runAll(ctx) } catch (e: Exception) { /* next round */ }
+        try { DoodWidget.refresh(ctx) } catch (e: Exception) { /* the widget keeps its old numbers */ }
         try {
             val conn = URL("$base/api/v1/notifications?unread=true&limit=10").openConnection() as HttpURLConnection
             conn.connectTimeout = 15000

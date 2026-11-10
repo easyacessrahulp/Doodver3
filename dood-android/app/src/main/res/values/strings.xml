@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">DOOD</string>
+    <string name="sc_new">New task</string>
+    <string name="sc_new_long">Add a new task</string>
+    <string name="sc_reviews">Reviews</string>
+    <string name="sc_reviews_long">Open Reviews</string>
+    <string name="sc_calendar">Calendar</string>
+    <string name="sc_calendar_long">Open Calendar</string>
+    <string name="sc_settings">Phone settings</string>
+    <string name="sc_settings_long">Phone reminders and lock</string>
+    <string name="sc_chats">Chats</string>
+    <string name="sc_chats_long">Open chats</string>
 </resources>
